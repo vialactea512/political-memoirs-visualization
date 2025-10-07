@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Language of Political Power</title>
+    <style>
+        body {
+            font-family: 'Georgia', serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            padding: 2rem 0;
+        }
+        
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .viz-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .word-bubble {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .word-bubble:hover {
+            stroke: #e74c3c;
+            stroke-width: 3px;
+        }
+        
+        .word-text {
+            font-weight: bold;
+            text-anchor: middle;
+            pointer-events: none;
+            fill: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .details {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 2rem;
+            margin: 2rem 0;
+            display: none;
+        }
+        
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .book-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Language of Political Power</h1>
+            <p>Most common words in 126 political autobiographies</p>
+        </header>
+        
+        <div class="viz-container">
+            <h2>Click any bubble to explore</h2>
+            <div id="visualization"></div>
+        </div>
+        
+        <div id="details" class="details">
+            <h3 id="details-title"></h3>
+            <div id="details-content"></div>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // Data for visualization
+        const data = [
+            {word: "life", count: 25, color: "#3498db", books: [
+                "My Life - Bill Clinton", "An American Life - Ronald Reagan", 
+                "My Life - Richard Nixon", "My Life - Eleanor Roosevelt",
+                "A Full Life - Jimmy Carter", "A Big Life - Peter Costello"
+            ]},
+            {word: "story", count: 8, color: "#e74c3c", books: [
+                "My Story - Indira Gandhi", "My Story - Michelle Obama",
+                "My Story - Julia Gillard", "The Story of My Experiments with Truth - Mahatma Gandhi"
+            ]},
+            {word: "truth", count: 6, color: "#2ecc71", books: [
+                "The Truth of the Matter - John Major", "The Truths We Hold - Kamala Harris",
+                "Truth and Duty - Ann Coulter", "Truth to Power - Anwar Ibrahim"
+            ]},
+            {word: "politics", count: 6, color: "#f39c12", books: [
+                "My Life in Politics - Benazir Bhutto", "A Life in Politics - Shirley Williams",
+                "The Art of Politics - Don Dunstan"
+            ]},
+            {word: "power", count: 4, color: "#9b59b6", books: [
+                "The Path to Power - Margaret Thatcher", "A Path to Power - Tony Blair"
+            ]},
+            {word: "memoirs", count: 7, color: "#1abc9c", books: [
+                "Memoirs - Golda Meir", "The Hawke Memoirs - Bob Hawke",
+                "My Memoirs - Ulysses S. Grant"
+            ]},
+            {word: "years", count: 4, color: "#34495e", books: [
+                "The Years of Lyndon Johnson - Robert Caro", "The Blair Years - Alastair Campbell"
+            ]},
+            {word: "long", count: 4, color: "#e67e22", books: [
+                "Long Walk to Freedom - Nelson Mandela", "The Long March - Bill Shorten"
+            ]}
+        ];
+
+        // Create visualization
+        const width = 800;
+        const height = 500;
+        
+        const svg = d3.select("#visualization")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`);
+        
+        const sizeScale = d3.scaleSqrt()
+            .domain([0, d3.max(data, d => d.count)])
+            .range([30, 80]);
+        
+        const simulation = d3.forceSimulation(data)
+            .force("charge", d3.forceManyBody().strength(50))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide().radius(d => sizeScale(d.count) + 5));
+        
+        const bubbles = svg.selectAll(".word-bubble")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("class", "word-bubble")
+            .attr("r", d => sizeScale(d.count))
+            .attr("fill", d => d.color)
+            .on("click", showDetails);
+        
+        const labels = svg.selectAll(".word-text")
+            .data(data)
+            .enter()
+            .append("text")
+            .attr("class", "word-text")
+            .text(d => d.word)
+            .style("font-size", d => `${Math.max(12, sizeScale(d.count) / 3)}px`);
+        
+        simulation.on("tick", () => {
+            bubbles.attr("cx", d => d.x).attr("cy", d => d.y);
+            labels.attr("x", d => d.x).attr("y", d => d.y);
+        });
+        
+        function showDetails(event, d) {
+            const details = document.getElementById("details");
+            const title = document.getElementById("details-title");
+            const content = document.getElementById("details-content");
+            
+            title.textContent = `"${d.word}" appears in ${d.count} book titles`;
+            
+            const booksHtml = d.books.map(book => 
+                `<div class="book-item">${book}</div>`
+            ).join('');
+            
+            content.innerHTML = `<div class="book-grid">${booksHtml}</div>`;
+            details.style.display = "block";
+            details.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
